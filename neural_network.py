@@ -155,6 +155,45 @@ class NN:
                 print("Accuracy = ",(ct/tc)*100)
                 # print(self.weights)
 
+    def test_model(self):
+        tp=0.
+        fp=0.
+        tn=0.
+        fn=0.
+        for i in self.testing_data:
+            input=i[:len(i)-1]
+            input=np.array(input)
+            input=input.reshape([len(input),1])
+            expected_output=i[len(i)-1]
+            predicted,expected_output=self.feedforward(input,expected_output)
+            # print(epoch,predicted,expected_output)
+            if(predicted<=0.5):
+                predicted=0
+            else:
+                predicted=1
+            if expected_output==1:
+                if predicted==1:
+                    tp+=1
+                else:
+                    fn+=1
+            else:
+                if predicted==1:
+                    fp+=1
+                else:
+                    tn+=1
+        self.tp=tp
+        self.tn=tn
+        self.fp=fp
+        self.fn=fn
+
+    def stats(self):
+        self.precision=self.tp/(self.tp+self.fp)
+        self.recall=self.tp/(self.tp+self.fn)
+        self.f_score=(2*self.precision*self.recall)/(self.precision+self.recall)
+        self.accuracy=(self.tp+self.tn)/(self.tp+self.tn+self.fp+self.fn)
+        print("Accuracy = ",self.accuracy)
+        print("F-Score = ",self.f_score)
+
     def check_model(self):
         print(self.ct_layers)
         print(self.shape_layers)
@@ -171,3 +210,5 @@ if __name__=='__main__':
     model.add_layer(3,'sigmoid')
     # model.add_layer(10,'sigmoid')
     model.train_model()
+    model.test_model()
+    model.stats()
