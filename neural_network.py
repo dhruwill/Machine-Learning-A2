@@ -113,7 +113,7 @@ class NN:
                     term=term.transpose()
                     deriv_w[i]=self.layers[i].dot(term)
                     deriv_w[i]=deriv_w[i].transpose()
-                elif self.activation_functions[i]=='tanh':
+                elif self.activation_functions[i+1]=='tanh':
                     last=self.d_tanh(self.layers[i+1])
                     mid=deriv_w[i+1].transpose().dot(self.weights[i+1])
                     term=mid.dot(last)
@@ -122,7 +122,7 @@ class NN:
                     deriv_w[i]=deriv_w[i].transpose()
         return deriv_w
 
-    def train_model(self,epochs=10000,batch_size=256,sample=100,learning_rate=0.002):
+    def train_model(self,epochs=10000,batch_size=512,sample=100,learning_rate=0.002):
         for epoch in range(1,epochs+1):
             train_data=[]
             loss=0.
@@ -171,6 +171,7 @@ class NN:
                 predicted=0
             else:
                 predicted=1
+            expected_output=int(expected_output[0][0])
             if expected_output==1:
                 if predicted==1:
                     tp+=1
@@ -206,8 +207,9 @@ if __name__=='__main__':
     filename='housepricedata.csv'
     data=get_data(filename)
     model=NN(data)
-    model.add_layer(5,'sigmoid')
-    model.add_layer(3,'sigmoid')
+    # model.add_layer(8,'sigmoid')
+    model.add_layer(6,'sigmoid')
+    model.add_layer(4,'sigmoid')
     # model.add_layer(10,'sigmoid')
     model.train_model()
     model.test_model()
