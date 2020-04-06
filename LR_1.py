@@ -15,16 +15,29 @@ def predict(X, w, b):
 def loss(y_pred,t):
 	return np.mean(-t*np.log(y_pred)-(1-t)*np.log(1-y_pred))
 
-def accuracy(y_pred, test):
-	acc = 0
-	not_acc = 0
+#def accuracy(y_pred, test):
+#	acc = 0
+#	not_acc = 0
 
-	for i in range(0, y_pred.shape[0]):
-		if y_pred[i] == test[i]:
-			acc = acc + 1
-		else:
-			not_acc = not_acc + 1
-	return (float(acc)/float(acc + not_acc))
+#	for i in range(0, y_pred.shape[0]):
+#		if y_pred[i] == test[i]:
+#			acc = acc + 1
+#		else:
+#			not_acc = not_acc + 1
+#	return (float(acc)/float(acc + not_acc))*100
+
+def report(y_pred, test):
+	tp = sum((test == 1) & (y_pred == 1))
+	tn = sum((test == 0) & (y_pred == 0))
+	fn = sum((test == 1) & (y_pred == 0))
+	fp = sum((test == 0) & (y_pred == 1))
+
+	accuracy = ((tp + tn)*100)/float(tn + tp + fn + fp)
+	precision = (tp)/float(tp + fp)
+	recall = (tp)/float(tp + fn)
+	fscore = (2*precision*recall)/(precision + recall)
+
+	return accuracy, fscore
 
 
 
@@ -60,21 +73,10 @@ if __name__ == "__main__":
 	
 	print(W)
 	print(b)
-	plt.show()
-
+	
 	T_pred = predict(X_test, W, b)
-	a = accuracy(T_pred, T_test)
-	print("accuracy",a)
 
+	acc, f = report(T_pred, T_test)
+	print("Accuracy = ", acc[0])
+	print("F score = ", f[0])
 	
-	
-
-	
-
-
-
-
-
-
-		
-
