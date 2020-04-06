@@ -51,20 +51,24 @@ if __name__ == "__main__":
 	X_train_standard = stan(X_train)
 	X_test_standard = stan(X_test)
 	
-	epoch = 5000
+	epoch = 50000
 	lr = 0.5
-	L1_coeff = 0.001
+	L1_coeff = 0.0001
 	np.random.seed(0)
-	W = np.random.uniform(0,1,size=(X_train.shape[1],1)) 	#intial weights
-	b = 1                                        			    #bias
+	W = np.random.uniform(0,1,size=(X_train_standard.shape[1],1)) 	#intial weights
+	b = 1                                        			#bias
+
 
 	for i in range(epoch):
-		Z = np.dot(X_train, W) + b
+		Z = np.dot(X_train_standard, W) + b
 		y_predicted = sigmoid(Z)
 		error = loss(y_predicted, T_train)
-		print("------------->",error)                     	
+		print("------------->",error)   
+		if math.isnan(error):
+			break              
+
 		grad = y_predicted - T_train
-		gradient= np.dot(np.transpose(X_train),grad)/(X_train.shape[0])
+		gradient= np.dot(np.transpose(X_train_standard),grad)/(X_train_standard.shape[0])
 		grad_bias = np.average(grad)
 		W = W - lr*gradient + L1_coeff*np.sign(W)
 		b = b - lr*grad_bias + L1_coeff*np.sign(b)
@@ -72,7 +76,7 @@ if __name__ == "__main__":
 	print(W)
 	print(b)
 
-	T_pred = predict(X_test, W, b)
+	T_pred = predict(X_test_standard, W, b)
 	a = accuracy(T_pred, T_test)
 	print("accuracy",a)
 
