@@ -33,7 +33,7 @@ def standardize_data(data):
 
 
 class NN:
-    def __init__(self,data):
+    def __init__(self,data,initialization='random'):
         self.data=data
         self.columnlabel=len(self.data[0])-1
         self.input_layer_dim=self.columnlabel
@@ -49,11 +49,21 @@ class NN:
         self.activation_functions={}
         self.activation_functions[2]='sigmoid'
         self.weights={}
-        self.weights[1]=np.zeros([1,self.input_layer_dim])
+        self.biases={}
+        self.unactivated_layers={}
+        if initialization=='random':
+            self.weights[1]=np.random.rand(1,self.input_layer_dim)
+            self.biases[1]=np.random.rand(1,1)
+        elif initialization=='normal':
+            self.weights[1]=np.random.randn(1,self.input_layer_dim)
+            self.biases[1]=np.random.randn(1,1)
+        elif initialization=='zero':
+            self.weights[1]=np.zeros([1,self.input_layer_dim])
+            self.biases[1]=np.zeros([1,1])
         self.shape_layers[1]=self.input_layer_dim
         self.shape_layers[2]=1
 
-    def add_layer(self,neurons,activation_function):
+    def add_layer(self,neurons,activation_function,initialization='random'):
         self.layers[self.ct_layers+1]=self.layers[self.ct_layers]
         self.layers[self.ct_layers]=np.zeros([neurons,1])
         self.activation_functions[self.ct_layers+1]=self.activation_functions[self.ct_layers]
@@ -63,8 +73,20 @@ class NN:
         self.ct_weights+=1
         self.ct_layers+=1
         for i in range(1,self.ct_weights+1):
-            self.weights[i]=np.random.rand(self.shape_layers[i+1],self.shape_layers[i])
-            # self.weights[i]=np.zeros([self.shape_layers[i+1],self.shape_layers[i]])
+            if initialization=='random':
+                self.weights[i]=np.random.rand(self.shape_layers[i+1],self.shape_layers[i])
+            elif initialization=='normal':
+                self.weights[i]=np.random.randn(self.shape_layers[i+1],self.shape_layers[i])
+            elif initialization=='zero':
+                self.weights[i]=np.zeros([self.shape_layers[i+1],self.shape_layers[i]])
+        for i in range(1,self.ct_layers):
+            if initialization=='random':
+                self.biases[i]=np.random.rand(self.shape_layers[i+1],1)
+            elif initialization=='normal':
+                self.biases[i]=np.random.randn(self.shape_layers[i+1],1)
+            elif initialization=='zero':
+                self.biases[i]=np.zeros([self.shape_layers[i+1],1])
+
 
 
     def sigmoid(self,x):
@@ -81,16 +103,61 @@ class NN:
     def d_tanh(self,x):
         return 1-(self.tanh(x))**2
 
+    def ReLU(self,x):
+        z=[]
+        l1=x.shape[0]
+        l2=x.shape[1]
+        for i in range(l1):
+            a=[]
+            for j in range(l2):
+                if x[i][j]<=0:
+                    a.append(0)
+                else:
+                    a.append(x[i][j])
+            a=np.array(a)
+            z.append(a)
+        z=np.array(z)
+        return z
+
+    def d_ReLU(self,x):
+        z=[]
+        l1=x.shape[0]
+        l2=x.shape[1]
+        for i in range(l1):
+            a=[]
+            for j in range(l2):
+                if x[i][j]<=0:
+                    a.append(0)
+                else:
+                    a.append(1)
+            a=np.array(a)
+            z.append(a)
+        z=np.array(z)
+        return z
+
     def feedforward(self,input,expected_output):
         for i in self.layers:
             if i==1:
                 self.layers[i]=np.array(input)
                 self.layers[i].reshape([self.shape_layers[i],1])
+                self.unactivated_layers[i]=self.layers[i]
             else:
                 if self.activation_functions[i]=='sigmoid':
-                    self.layers[i]=self.sigmoid(self.weights[i-1].dot(self.layers[i-1]))
+                    self.layers[i]=self.weights[i-1].dot(self.layers[i-1])
+                    self.layers[i]+=self.biases[i-1]
+                    self.unactivated_layers[i]=self.layers[i]
+                    self.layers[i]=self.sigmoid(self.layers[i])
                 elif self.activation_functions[i]=='tanh':
-                    self.layers[i]=self.tanh(self.weights[i-1].dot(self.layers[i-1]))
+                    self.layers[i]=self.weights[i-1].dot(self.layers[i-1])
+                    self.layers[i]+=self.biases[i-1]
+                    self.unactivated_layers[i]=self.layers[i]
+                    self.layers[i]=self.tanh(self.layers[i])
+                elif self.activation_functions[i]=='ReLU':
+                    self.layers[i]=self.weights[i-1].dot(self.layers[i-1])
+                    self.layers[i]+=self.biases[i-1]
+                    self.unactivated_layers[i]=self.layers[i]
+                    self.layers[i]=self.ReLU(self.layers[i])
+
         predicted=self.layers[self.ct_layers]
         expected_output=np.array([expected_output])
         expected_output=np.array([expected_output])
@@ -98,31 +165,52 @@ class NN:
 
     def backprop(self,predicted,expected_output):
         deriv_w={}
+        deriv_b={}
+        loss=predicted-expected_output
         for i in range(self.ct_weights,0,-1):
             if i==self.ct_weights:
                 if self.activation_functions[i+1]=='sigmoid':
-                    deriv_w[i]=self.layers[i].dot(2*(expected_output-predicted).dot(self.d_sigmoid(self.layers[i+1])))
+                    deriv_w[i]=self.layers[i].dot((expected_output-predicted).dot(self.d_sigmoid(self.unactivated_layers[i+1])))
+                    deriv_b[i]=(expected_output-predicted).dot(self.d_sigmoid(self.unactivated_layers[i+1]))
                 elif self.activation_functions[i+1]=='tanh':
-                    deriv_w[i]=self.layers[i].dot(2*(expected_output-predicted).dot(self.d_tanh(predicted)))
+                    deriv_w[i]=self.layers[i].dot((expected_output-predicted).dot(self.d_tanh(self.unactivated_layers[i+1])))
+                    deriv_b[i]=(expected_output-predicted).dot(self.d_tanh(self.unactivated_layers[i+1]))
+                elif self.activation_functions[i+1]=='ReLU':
+                    deriv_w[i]=self.layers[i].dot((expected_output-predicted).dot(self.d_ReLU(self.unactivated_layers[i+1])))
+                    deriv_b[i]=(expected_output-predicted).dot(self.d_ReLU(self.unactivated_layers[i+1]))
                 deriv_w[i]=deriv_w[i].transpose()
+                deriv_b[i]=deriv_b[i].transpose()
             else:
                 if self.activation_functions[i+1]=='sigmoid':
-                    last=self.d_sigmoid(self.layers[i+1])
+                    last=self.d_sigmoid(self.unactivated_layers[i+1])
                     mid=deriv_w[i+1].transpose().dot(self.weights[i+1])
                     term=mid.dot(last)
                     term=term.transpose()
                     deriv_w[i]=self.layers[i].dot(term)
+                    deriv_b[i]=term
                     deriv_w[i]=deriv_w[i].transpose()
+                    deriv_b[i]=deriv_b[i].transpose()
                 elif self.activation_functions[i+1]=='tanh':
-                    last=self.d_tanh(self.layers[i+1])
+                    last=self.d_tanh(self.unactivated_layers[i+1])
                     mid=deriv_w[i+1].transpose().dot(self.weights[i+1])
                     term=mid.dot(last)
                     term=term.transpose()
+                    deriv_b[i]=term
                     deriv_w[i]=self.layers[i].dot(term)
                     deriv_w[i]=deriv_w[i].transpose()
-        return deriv_w
+                    deriv_b[i]=deriv_b[i].transpose()
+                elif self.activation_functions[i+1]=='ReLU':
+                    last=self.d_ReLU(self.unactivated_layers[i+1])
+                    mid=deriv_w[i+1].transpose().dot(self.weights[i+1])
+                    term=mid.dot(last)
+                    term=term.transpose()
+                    deriv_b[i]=term
+                    deriv_w[i]=self.layers[i].dot(term)
+                    deriv_w[i]=deriv_w[i].transpose()
+                    deriv_b[i]=deriv_b[i].transpose()
+        return deriv_w,deriv_b
 
-    def train_model(self,epochs=10000,batch_size=512,sample=100,learning_rate=0.002):
+    def train_model(self,epochs=10000,batch_size=128,sample=100,learning_rate=0.01):
         for epoch in range(1,epochs+1):
             train_data=[]
             loss=0.
@@ -138,17 +226,28 @@ class NN:
                 expected_output=i[len(i)-1]
                 predicted,expected_output=self.feedforward(input,expected_output)
                 # print(epoch,predicted,expected_output)
-                if(predicted<=0.5):
+                # print(predicted,1-predicted)
+                try:
+                    if expected_output==0:
+                        loss+=-np.log(1-predicted)
+                    else:
+                        loss+=-np.log(predicted)
+                except Exception as e:
+                    print(e,predicted,1-predicted)
+                tc+=1
+
+                deriv_w,deriv_b=self.backprop(predicted,expected_output)
+                for i in self.weights:
+                    self.weights[i]+=learning_rate*deriv_w[i]
+                    self.biases[i]+=learning_rate*deriv_b[i]
+                # print(self.layers)
+                if predicted<=0.5:
                     predicted=0
                 else:
                     predicted=1
-                loss+=(predicted-expected_output)**2
-                tc+=1
                 if predicted==expected_output:
                     ct+=1
-                deriv_w=self.backprop(predicted,expected_output)
-                for i in self.weights:
-                    self.weights[i]+=learning_rate*deriv_w[i]
+
             if epoch%sample==0:
                 print("Epoch = ",epoch,end='\t')
                 print("Loss = ",loss,end='\t')
@@ -202,12 +301,13 @@ class NN:
         print(self.activation_functions)
         print(self.ct_weights)
         print(self.weights)
+        print(self.biases)
 
 if __name__=='__main__':
     filename='housepricedata.csv'
     data=get_data(filename)
-    model=NN(data)
-    # model.add_layer(8,'sigmoid')
+    model=NN(data,initialization='normal')
+    # model.add_layer(8,'ReLU')
     model.add_layer(6,'sigmoid')
     model.add_layer(4,'sigmoid')
     # model.add_layer(10,'sigmoid')

@@ -42,7 +42,3 @@ if __name__ == "__main__":
 	   	grad_bias = np.average(grad)
 	   	W=W-.01*grad_weight
 	  	b=b-.01*grad_bias
-
-
-		
-
