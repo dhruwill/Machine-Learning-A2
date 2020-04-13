@@ -4,6 +4,9 @@ import random
 import math
 
 def get_data(filename):
+    '''
+    Reads the filename given as argument and converts csv to data array and return normalized data
+    '''
     import csv
     data=[]
     with open(filename) as csv_file:
@@ -17,9 +20,13 @@ def get_data(filename):
                 a.append(int(row[len(row)-1]))
                 data.append(a)
             line_count+=1
-    return standardize_data(data)
+    return normalize_data(data)
 
-def standardize_data(data):
+def normalize_data(data):
+    '''
+    Normalizes the dataset
+    X[i] = X[i] - min(ith column) / (max(ith column) - min(ith column))
+    '''
     a={}
     for i in range(len(data[0])):
         a[i]=[]
@@ -33,7 +40,26 @@ def standardize_data(data):
 
 
 class NN:
+    '''
+    Class Implementing Neural Networks from scratch
+    with all the functions such as add_layer , train_model ...
+    It takes data as input , splits the data into test-train ,
+    creates layers as specified with activation functions and number of neurons
+    per layer.
+    '''
     def __init__(self,data,initialization='random'):
+        '''
+        data = total dataset data with last column as target column required for binary classification
+        initialization = type of initialization for weights from input layer and bias present at input layer
+        columnlabel = index of target column
+        layers = value of layers stored in dictionary format after applying activation_function
+        shape_layers = number of neurons in ith layer
+        ct_layers = total number of layers including input and output layers
+        ct_weights = total number of weights vectors
+        activation_functions = activation_function for each layer
+        biases = bias vector for each layer
+        unactivated_layers = value of layers vectors before activation
+        '''
         self.data=data
         self.columnlabel=len(self.data[0])-1
         self.input_layer_dim=self.columnlabel
@@ -51,6 +77,9 @@ class NN:
         self.weights={}
         self.biases={}
         self.unactivated_layers={}
+        '''
+        initialization of weights and biases according to the user
+        '''
         if initialization=='random':
             self.weights[1]=np.random.rand(1,self.input_layer_dim)
             self.biases[1]=np.random.rand(1,1)
@@ -64,6 +93,10 @@ class NN:
         self.shape_layers[2]=1
 
     def add_layer(self,neurons,activation_function,initialization='random'):
+        '''
+        Adding layer to the neural network with given number of neurons ,
+        activation_function and initialization
+        '''
         self.layers[self.ct_layers+1]=self.layers[self.ct_layers]
         self.layers[self.ct_layers]=np.zeros([neurons,1])
         self.activation_functions[self.ct_layers+1]=self.activation_functions[self.ct_layers]
@@ -90,20 +123,36 @@ class NN:
 
 
     def sigmoid(self,x):
+        '''
+        Sigmoid Activation Function which returns 1/(1+e^-x)
+        '''
         z = 1/(1 + np.exp(-x))
         return z
 
     def d_sigmoid(self,x):
+        '''
+        Differentiation of Sigmoid w.r.t x = Sigmoid(x)*(1-Sigmoid(x))
+        '''
         return (self.sigmoid(x))*(1-self.sigmoid(x))
 
     def tanh(self,x):
+        '''
+        Tanh Activation Function
+        '''
         z=np.tanh(x)
         return z
 
     def d_tanh(self,x):
+        '''
+        Differentiation of Tanh w.r.t x =(1-(Tanh(x))^2)
+        '''
         return 1-(self.tanh(x))**2
 
     def ReLU(self,x):
+        '''
+        ReLU Activation Function : (Rectified Linear Unit)
+        Return max(0,a[i])
+        '''
         z=[]
         l1=x.shape[0]
         l2=x.shape[1]
@@ -120,6 +169,9 @@ class NN:
         return z
 
     def d_ReLU(self,x):
+        '''
+        Differentiation of ReLU
+        '''
         z=[]
         l1=x.shape[0]
         l2=x.shape[1]
@@ -136,6 +188,13 @@ class NN:
         return z
 
     def feedforward(self,input,expected_output):
+        '''
+        FeedForwarding using calculated weights to obtain layers vectors
+        For All layers (except Input Layer):
+            unactivated_layers[i] = weights[i-1].layers[i-1] + biases[i-1]
+            layers[i] = Activation_Function[i](unactivated_layers[i])
+        Predicted output = value of last layer
+        '''
         for i in self.layers:
             if i==1:
                 self.layers[i]=np.array(input)
@@ -164,6 +223,10 @@ class NN:
         return predicted,expected_output
 
     def backprop(self,predicted,expected_output):
+        '''
+        Backpropagation of all layers to get derivative of weights and biases
+
+        '''
         deriv_w={}
         deriv_b={}
         loss=predicted-expected_output
@@ -210,7 +273,12 @@ class NN:
                     deriv_b[i]=deriv_b[i].transpose()
         return deriv_w,deriv_b
 
-    def train_model(self,epochs=10000,batch_size=128,sample=100,learning_rate=0.01):
+    def train_model(self,epochs=10000,batch_size=128,sample_interval=100,learning_rate=0.01):
+        '''
+        Trains model for given number of epochs taking batch_size rows everytime in 1 epoch.
+        It adds learning_rate times derivative to weights and biases to reach local minima.
+        It prints loss and accuracy at every sample_interval intervals
+        '''
         for epoch in range(1,epochs+1):
             train_data=[]
             loss=0.
@@ -225,8 +293,10 @@ class NN:
                 input=input.reshape([len(input),1])
                 expected_output=i[len(i)-1]
                 predicted,expected_output=self.feedforward(input,expected_output)
-                # print(epoch,predicted,expected_output)
-                # print(predicted,1-predicted)
+                '''
+                Calculating loss using binary crossentropy for binary classification
+                Loss  = - i * Log(P[i]) - (1 - i) * Log(1 - P[i])
+                '''
                 try:
                     if expected_output==0:
                         loss+=-np.log(1-predicted)
@@ -237,10 +307,16 @@ class NN:
                 tc+=1
 
                 deriv_w,deriv_b=self.backprop(predicted,expected_output)
+                '''
+                Updating weights and biases according to derivative
+                '''
                 for i in self.weights:
                     self.weights[i]+=learning_rate*deriv_w[i]
                     self.biases[i]+=learning_rate*deriv_b[i]
                 # print(self.layers)
+                '''
+                Predicting the output using threshhold as 0.5
+                '''
                 if predicted<=0.5:
                     predicted=0
                 else:
@@ -248,13 +324,16 @@ class NN:
                 if predicted==expected_output:
                     ct+=1
 
-            if epoch%sample==0:
+            if epoch%sample_interval==0:
                 print("Epoch = ",epoch,end='\t')
                 print("Loss = ",loss,end='\t')
                 print("Accuracy = ",(ct/tc)*100)
                 # print(self.weights)
 
     def test_model(self):
+        '''
+        Testing the trained model on test data Calculating accuracy and f-score
+        '''
         tp=0.
         fp=0.
         tn=0.
@@ -286,7 +365,14 @@ class NN:
         self.fp=fp
         self.fn=fn
 
-    def stats(self):
+    def evaluate(self):
+        '''
+        Evaluating the model using confusion matrix
+        precision = TP / (TP + FP)
+        recall = TP / (TP + FN)
+        F-Score = (2 * precision * recall) / (precision + recall)
+        accuracy = (TP + TN) / (TP + TN + FP + FN)
+        '''
         self.precision=self.tp/(self.tp+self.fp)
         self.recall=self.tp/(self.tp+self.fn)
         self.f_score=(2*self.precision*self.recall)/(self.precision+self.recall)
@@ -295,6 +381,9 @@ class NN:
         print("F-Score = ",self.f_score)
 
     def check_model(self):
+        '''
+        Just to check the model and shapes
+        '''
         print(self.ct_layers)
         print(self.shape_layers)
         print(self.layers)
@@ -313,4 +402,4 @@ if __name__=='__main__':
     # model.add_layer(10,'sigmoid')
     model.train_model()
     model.test_model()
-    model.stats()
+    model.evaluate()
