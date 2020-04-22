@@ -225,7 +225,8 @@ class NN:
     def backprop(self,predicted,expected_output):
         '''
         Backpropagation of all layers to get derivative of weights and biases
-
+        dw = dC/dZ * dZ/dw
+        db = dC/dZ * dZ/db
         '''
         deriv_w={}
         deriv_b={}
